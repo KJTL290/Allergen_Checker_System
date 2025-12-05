@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrated Food & Allergy System</title>
+    <!-- Tailwind CSS for rapid styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom scrollbar for mobile feel */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+        .mobile-screen { max-width: 480px; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); min-height: 100vh; background: #fff; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <!-- APP CONTAINER -->
+    <div id="app">
+        <!-- Views will be injected here -->
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // ==========================================
+        // 1. MOCK DATABASE (Simulating MySQL)
+        // ==========================================
+        const defaultMenu = [
+            { id: 1, name: "Shrimp Tempura", price: 12.50, category: "Main", ingredients: "Shrimp, Wheat, Egg, Soy Sauce", image: "🍤" },
+            { id: 2, name: "Peanut Butter Burger", price: 9.00, category: "Burger", ingredients: "Beef, Wheat Bun, Peanut Butter, Cheese", image: "🍔" },
+            { id: 3, name: "Vegan Salad", price: 7.00, category: "Sides", ingredients: "Lettuce, Tomato, Cucumber, Olive Oil", image: "🥗" },
+            { id: 4, name: "Cheeseburger", price: 8.50, category: "Burger", ingredients: "Beef, Wheat Bun, Cheese, Onion", image: "🧀" },
+            { id: 5, name: "Egg Fried Rice", price: 5.00, category: "Sides", ingredients: "Rice, Egg, Soy Sauce, Scallions", image: "🍚" },
+        ];
+
+        const defaultUsers = [
+            { id: 1, username: "admin", password: "123", role: "admin", name: "System Administrator" },
+            { id: 2, username: "staff", password: "123", role: "staff", name: "Counter Staff 1" }
+        ];
+
+        // Database Helper to handle LocalStorage
+        const DB = {
+            init: () => {
+                if (!localStorage.getItem('sys_menu')) localStorage.setItem('sys_menu', JSON.stringify(defaultMenu));
+                if (!localStorage.getItem('sys_users')) localStorage.setItem('sys_users', JSON.stringify(defaultUsers));
+                if (!localStorage.getItem('sys_orders')) localStorage.setItem('sys_orders', JSON.stringify([]));
+            },
+            get: (table) => JSON.parse(localStorage.getItem(`sys_${table}`) || '[]'),
+            set: (table, data) => localStorage.setItem(`sys_${table}`, JSON.stringify(data)),
+            add: (table, item) => {
+                const data = DB.get(table);
+                item.id = Date.now(); // Auto-increment simulation
+                data.push(item);
+                DB.set(table, data);
+            },
+            update: (table, id, newData) => {
+                let data = DB.get(table);
+                data = data.map(item => item.id == id ? { ...item, ...newData } : item);
+                DB.set(table, data);
+            },
+            delete: (table, id) => {
+                let data = DB.get(table);
+                data = data.filter(item => item.id != id);
+                DB.set(table, data);
+            }
+        };
+
+        // Initialize Data
+        DB.init();
+
+        // ==========================================
+        // 2. STATE MANAGEMENT
+        // ==========================================
+        const State = {
+            currentUser: null,
+            clientAllergies: [],
+            cart: [],
+            currentView: 'login' // login, admin, staff, client
+        };
+
+        // ==========================================
+        // 3. UI RENDERING FUNCTIONS
+        // ==========================================
+        
+        const app = document.getElementById('app');
+
+        function render() {
+            app.innerHTML = '';
+            switch(State.currentView) {
+                case 'login': renderLogin(); break;
+                case 'admin': renderAdmin(); break;
+                case 'staff': renderStaff(); break;
+                case 'client': renderClient(); break;
+            }
+        }
+
+        // --- LOGIN VIEW ---
+        function renderLogin() {
+            app.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center bg-blue-900">
+                    <div class="bg-white p-8 rounded-lg shadow-xl w-96">
+                        <h1 class="text-2xl font-bold text-center mb-6 text-blue-900">System Integration</h1>
+                        <div class="space-y-4">
+                            <input id="login-user" type="text" placeholder="Username" class="w-full p-2 border rounded">
+                            <input id="login-pass" type="password" placeholder="Password" class="w-full p-2 border rounded">
+                            <button onclick="handleLogin()" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Staff/Admin Login</button>
+                            <div class="relative flex py-2 items-center">
+                                <div class="flex-grow border-t border-gray-400"></div>
+                                <span class="flex-shrink mx-4 text-gray-400">OR</span>
+                                <div class="flex-grow border-t border-gray-400"></div>
+                            </div>
+                            <button onclick="State.currentView = 'client'; render()" class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">
+                                <i class="fas fa-mobile-alt mr-2"></i> Open Client Kiosk
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- CLIENT / KIOSK VIEW (Mobile First) ---
+        function renderClient() {
+            const menu = DB.get('menu');
+            
+            let menuHTML = menu.map(item => {
+                // INTEGRATION: ALLERGY CHECK LOGIC
+                // Check if any ingredient matches user allergies
+                let warning = '';
+                let isDangerous = false;
+                
+                if (State.clientAllergies.length > 0) {
+                    const ingredientsList = item.ingredients.toLowerCase();
+                    const conflict = State.clientAllergies.find(allergy => ingredientsList.includes(allergy.toLowerCase()));
+                    if (conflict) {
+                        warning = `<div class="bg-red-100 text-red-700 text-xs p-1 rounded mt-1 border border-red-300">
+                            <i class="fas fa-exclamation-triangle"></i> Contains ${conflict}
+                        </div>`;
+                        isDangerous = true;
+                    }
+                }
+
+                return `
+                <div class="bg-white p-3 rounded shadow flex flex-col justify-between relative overflow-hidden">
+                    ${isDangerous ? '<div class="absolute top-0 right-0 bg-red-600 text-white text-xs px-2 py-1">ALLERGY ALERT</div>' : ''}
+                    <div class="text-4xl text-center mb-2">${item.image}</div>
+                    <div>
+                        <h3 class="font-bold text-sm">${item.name}</h3>
+                        <p class="text-xs text-gray-500 line-clamp-2">${item.ingredients}</p>
+                        ${warning}
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="font-bold text-blue-600">$${item.price.toFixed(2)}</span>
+                            <button onclick="addToCart(${item.id}, ${isDangerous})" class="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600">
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Cart HTML
+            const cartTotal = State.cart.reduce((acc, item) => acc + item.price, 0);
+
+            app.innerHTML = `
+                <div class="mobile-screen flex flex-col bg-gray-50">
+                    <!-- Kiosk Header -->
+                    <div class="bg-blue-600 text-white p-4 shadow sticky top-0 z-10">
+                        <div class="flex justify-between items-center">
+                            <h2 class="font-bold text-lg">Order Kiosk</h2>
+                            <button onclick="logout()" class="text-xs opacity-75">Exit</button>
+                        </div>
+                        
+                        <!-- ALLERGY INPUT SECTION -->
+                        <div class="mt-2 bg-blue-700 p-2 rounded">
+                            <label class="text-xs text-blue-200 block mb-1">Step 1: Enter Allergies (Comma separated)</label>
+                            <div class="flex gap-2">
+                                <input id="allergyInput" type="text" 
+                                    value="${State.clientAllergies.join(', ')}"
+                                    placeholder="Ex: Peanuts, Shrimp" 
+                                    class="text-black text-sm p-1 rounded flex-1 focus:outline-none">
+                                <button onclick="updateAllergies()" class="bg-white text-blue-700 px-3 rounded text-sm font-bold">Set</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Menu Grid -->
+                    <div class="flex-1 overflow-y-auto p-4">
+                        <h3 class="font-bold text-gray-700 mb-2">Menu</h3>
+                        <div class="grid grid-cols-2 gap-3 pb-20">
+                            ${menuHTML}
+                        </div>
+                    </div>
+
+                    <!-- Bottom Cart Dock -->
+                    <div class="bg-white border-t p-4 shadow-lg sticky bottom-0">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold">Total: $${cartTotal.toFixed(2)}</span>
+                            <span class="text-sm text-gray-500">${State.cart.length} Items</span>
+                        </div>
+                        <button onclick="placeOrder()" ${State.cart.length === 0 ? 'disabled' : ''} 
+                            class="w-full ${State.cart.length === 0 ? 'bg-gray-300' : 'bg-green-500'} text-white py-3 rounded font-bold text-lg shadow">
+                            Place Order
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- STAFF VIEW (Queue System) ---
+        function renderStaff() {
+            const orders = DB.get('orders').sort((a,b) => b.id - a.id); // Newest first
+            
+            const pendingOrders = orders.filter(o => o.status === 'pending');
+            const paidOrders = orders.filter(o => o.status === 'paid');
+
+            const orderCard = (o, showAction) => `
+                <div class="bg-white p-4 rounded shadow border-l-4 ${o.status === 'pending' ? 'border-orange-500' : 'border-green-500'} mb-3">
+                    <div class="flex justify-between font-bold mb-2">
+                        <span>Order #${o.id.toString().slice(-4)}</span>
+                        <span>$${o.total.toFixed(2)}</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mb-2">
+                        ${o.items.map(i => i.name).join(', ')}
+                    </div>
+                    ${o.allergies.length > 0 ? `<div class="text-xs text-red-500 font-bold mb-2">⚠️ Client Allergies: ${o.allergies.join(', ')}</div>` : ''}
+                    <div class="flex justify-between items-center text-xs text-gray-400">
+                        <span>${new Date(o.date).toLocaleTimeString()}</span>
+                        ${showAction ? 
+                            `<button onclick="updateOrderStatus(${o.id}, '${o.status === 'pending' ? 'paid' : 'completed'}')" 
+                                class="px-3 py-1 rounded text-white ${o.status === 'pending' ? 'bg-green-500 hover:bg-green-600' : 'bg-blue-500 hover:bg-blue-600'}">
+                                ${o.status === 'pending' ? 'Receive Payment' : 'Complete Order'}
+                             </button>` 
+                            : '<span class="text-green-600 font-bold">Completed</span>'
+                        }
+                    </div>
+                </div>
+            `;
+
+            app.innerHTML = `
+                <div class="min-h-screen bg-gray-100 flex flex-col">
+                    <header class="bg-indigo-700 text-white p-4 shadow flex justify-between items-center">
+                        <h1 class="text-xl font-bold">Staff Dashboard (Queue)</h1>
+                        <button onclick="logout()" class="bg-indigo-800 px-3 py-1 rounded">Logout</button>
+                    </header>
+                    <main class="flex-1 p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-w-6xl mx-auto w-full">
+                        <!-- PENDING PAYMENT COLUMN -->
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b-2 border-orange-500 pb-2">Pending Payment</h2>
+                            ${pendingOrders.length ? pendingOrders.map(o => orderCard(o, true)).join('') : '<p class="text-gray-400 italic">No pending orders</p>'}
+                        </div>
+                        
+                        <!-- KITCHEN / PREPARATION COLUMN -->
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-700 mb-4 border-b-2 border-green-500 pb-2">In Kitchen / Paid</h2>
+                            ${paidOrders.length ? paidOrders.map(o => orderCard(o, true)).join('') : '<p class="text-gray-400 italic">No paid orders</p>'}
+                        </div>
+                    </main>
+                </div>
+            `;
+        }
+
+        // --- ADMIN VIEW ---
+        function renderAdmin() {
+            const menu = DB.get('menu');
+            const users = DB.get('users');
+            const orders = DB.get('orders').filter(o => o.status !== 'cancelled');
+
+            // Calculate Sales
+            const totalSales = orders.reduce((acc, o) => acc + o.total, 0);
+            
+            // Group sales by day (Simple implementation)
+            const salesByDate = {};
+            orders.forEach(o => {
+                const date = new Date(o.date).toLocaleDateString();
+                if(!salesByDate[date]) salesByDate[date] = 0;
+                salesByDate[date] += o.total;
+            });
+
+            app.innerHTML = `
+                <div class="min-h-screen bg-gray-100 flex flex-col">
+                    <header class="bg-slate-800 text-white p-4 shadow flex justify-between items-center">
+                        <h1 class="text-xl font-bold">Admin Dashboard</h1>
+                        <button onclick="logout()" class="bg-slate-700 px-3 py-1 rounded">Logout</button>
+                    </header>
+                    
+                    <main class="flex-1 p-6 max-w-6xl mx-auto w-full space-y-8">
+                        
+                        <!-- STATS SECTION -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-white p-6 rounded shadow border-l-4 border-blue-500">
+                                <h3 class="text-gray-500 text-sm">Total Revenue</h3>
+                                <p class="text-3xl font-bold text-gray-800">$${totalSales.toFixed(2)}</p>
+                            </div>
+                            <div class="bg-white p-6 rounded shadow border-l-4 border-green-500">
+                                <h3 class="text-gray-500 text-sm">Total Orders</h3>
+                                <p class="text-3xl font-bold text-gray-800">${orders.length}</p>
+                            </div>
+                            <div class="bg-white p-6 rounded shadow border-l-4 border-purple-500">
+                                <h3 class="text-gray-500 text-sm">Registered Users</h3>
+                                <p class="text-3xl font-bold text-gray-800">${users.length}</p>
+                            </div>
+                        </div>
+
+                        <!-- SALES LOG -->
+                        <div class="bg-white rounded shadow p-6">
+                            <h2 class="text-xl font-bold mb-4">Daily Sales Report</h2>
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-100 border-b">
+                                        <th class="p-2">Date</th>
+                                        <th class="p-2">Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${Object.keys(salesByDate).map(date => `
+                                        <tr class="border-b">
+                                            <td class="p-2">${date}</td>
+                                            <td class="p-2 font-bold text-green-600">$${salesByDate[date].toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- MANAGEMENT GRID -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            
+                            <!-- MENU MANAGEMENT -->
+                            <div class="bg-white rounded shadow p-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h2 class="text-xl font-bold">Menu Management</h2>
+                                    <button onclick="addMenuItem()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">Add Item</button>
+                                </div>
+                                <div class="space-y-2 max-h-64 overflow-y-auto">
+                                    ${menu.map(m => `
+                                        <div class="flex justify-between items-center border p-2 rounded hover:bg-gray-50">
+                                            <div>
+                                                <div class="font-bold">${m.name}</div>
+                                                <div class="text-xs text-gray-500">$${m.price} - ${m.ingredients.substring(0,20)}...</div>
+                                            </div>
+                                            <button onclick="deleteItem('menu', ${m.id})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- USER MANAGEMENT -->
+                            <div class="bg-white rounded shadow p-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h2 class="text-xl font-bold">User Accounts</h2>
+                                    <button onclick="addUser()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">Add User</button>
+                                </div>
+                                <div class="space-y-2 max-h-64 overflow-y-auto">
+                                    ${users.map(u => `
+                                        <div class="flex justify-between items-center border p-2 rounded hover:bg-gray-50">
+                                            <div>
+                                                <div class="font-bold">${u.username} <span class="bg-gray-200 text-xs px-2 py-0.5 rounded ml-2">${u.role}</span></div>
+                                                <div class="text-xs text-gray-500">${u.name}</div>
+                                            </div>
+                                            ${u.username !== 'admin' ? `<button onclick="deleteItem('users', ${u.id})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                        </div>
+                    </main>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // 4. LOGIC / EVENT HANDLERS
+        // ==========================================
+
+        function handleLogin() {
+            const u = document.getElementById('login-user').value;
+            const p = document.getElementById('login-pass').value;
+            
+            const users = DB.get('users');
+            const user = users.find(user => user.username === u && user.password === p);
+
+            if (user) {
+                State.currentUser = user;
+                State.currentView = user.role; // admin or staff
+                render();
+            } else {
+                alert('Invalid Credentials');
+            }
+        }
+
+        function logout() {
+            State.currentUser = null;
+            State.currentView = 'login';
+            State.cart = [];
+            State.clientAllergies = [];
+            render();
+        }
+
+        // --- CLIENT ACTIONS ---
+
+        function updateAllergies() {
+            const input = document.getElementById('allergyInput').value;
+            // Clean input: split by comma, trim whitespace, remove empty
+            State.clientAllergies = input.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            render(); // Re-render to show warnings based on new allergies
+        }
+
+        function addToCart(itemId, isDangerous) {
+            if(isDangerous) {
+                const proceed = confirm("⚠️ ALLERGY WARNING ⚠️\n\nThis item contains ingredients you are allergic to.\nDo you still want to add it?");
+                if(!proceed) return;
+            }
+            
+            const menu = DB.get('menu');
+            const item = menu.find(i => i.id === itemId);
+            State.cart.push(item);
+            render();
+        }
+
+        function placeOrder() {
+            if(State.cart.length === 0) return;
+            
+            const order = {
+                items: State.cart,
+                total: State.cart.reduce((a,b) => a + b.price, 0),
+                status: 'pending', // Sent to staff
+                date: new Date().toISOString(),
+                allergies: State.clientAllergies
+            };
+
+            DB.add('orders', order);
+            State.cart = [];
+            alert("Order placed! Please proceed to the counter for payment.");
+            render();
+        }
+
+        // --- STAFF ACTIONS ---
+        function updateOrderStatus(id, newStatus) {
+            DB.update('orders', id, { status: newStatus });
+            render();
+        }
+
+        // --- ADMIN ACTIONS ---
+        function deleteItem(table, id) {
+            if(confirm("Are you sure?")) {
+                DB.delete(table, id);
+                render();
+            }
+        }
+
+        function addMenuItem() {
+            const name = prompt("Item Name:");
+            if(!name) return;
+            const price = parseFloat(prompt("Price:"));
+            const ingredients = prompt("Ingredients (comma separated):");
+            
+            DB.add('menu', { name, price, ingredients, category: 'General', image: '🍽️' });
+            render();
+        }
+
+        function addUser() {
+            const username = prompt("Username:");
+            if(!username) return;
+            const password = prompt("Password:");
+            const role = prompt("Role (admin/staff/client):").toLowerCase();
+            const name = prompt("Full Name:");
+            
+            DB.add('users', { username, password, role, name });
+            render();
+        }
+
+        // --- INIT ---
+        render();
+
+    </script>
+</body>
+</html>
