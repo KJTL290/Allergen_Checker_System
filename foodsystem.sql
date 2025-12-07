@@ -53,8 +53,8 @@ INSERT INTO `food` (`id`, `name`, `ingredients`, `price`, `image`) VALUES
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
-  `food_id` int(11) DEFAULT NULL,
-  `status` enum('Queued','Preparing','Ready') DEFAULT 'Queued',
+  `food_id` varchar(255) DEFAULT NULL,
+  `status` varchar(50) DEFAULT 'Pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -91,7 +91,13 @@ CREATE TABLE `users` (
   `username` varchar(100) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
   `role` enum('admin','staff','client') DEFAULT 'client',
-  `allergies` text DEFAULT NULL
+  `first_name` varchar(100) DEFAULT NULL,
+  `middle_name` varchar(100) DEFAULT NULL,
+  `last_name` varchar(100) DEFAULT NULL,
+  `age` int(3) DEFAULT NULL,
+  `contact_info` varchar(20) DEFAULT NULL,
+  `allergies` text DEFAULT NULL,
+  `created_at` timestamp DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
