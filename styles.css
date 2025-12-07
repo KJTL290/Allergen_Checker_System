@@ -1,0 +1,272 @@
+/* Reset */
+* { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+/* Body */
+body {
+    background:#f5f5f5;
+    padding:20px;
+}
+
+/* Modern Login Page */
+body.login-page {
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background: linear-gradient(135deg, #6CC1FF, #3A8DFF);
+}
+
+/* Login container */
+.login-box {
+    background:#fff;
+    padding:40px 30px;
+    border-radius:15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    width:100%;
+    max-width:400px;
+    text-align:center;
+}
+
+/* Title */
+.login-box h2 {
+    margin-bottom:30px;
+    color:#333;
+}
+
+/* Inputs */
+.login-box input {
+    width:100%;
+    padding:12px 15px;
+    margin:10px 0;
+    border-radius:8px;
+    border:1px solid #ccc;
+    outline:none;
+    transition:0.3s;
+}
+
+.login-box input:focus {
+    border-color:#3A8DFF;
+    box-shadow:0 0 5px rgba(58,141,255,0.5);
+}
+
+/* Buttons */
+.login-box button {
+    width:100%;
+    padding:12px;
+    margin-top:15px;
+    border:none;
+    border-radius:8px;
+    background:#3A8DFF;
+    color:#fff;
+    font-size:16px;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.login-box button:hover {
+    background:#3273d6;
+}
+
+/* Links */
+.login-box a {
+    display:block;
+    margin-top:15px;
+    color:#3A8DFF;
+    text-decoration:none;
+    transition:0.3s;
+}
+
+.login-box a:hover {
+    text-decoration:underline;
+}
+
+/* Error message */
+.error {
+    color:red;
+    margin-bottom:10px;
+    font-weight:bold;
+}
+
+/* General container for other pages */
+.container {
+    max-width:1200px;
+    margin:0 auto;
+}
+
+/* Header / Title */
+h2, h3 {
+    color:#333;
+    margin-bottom:20px;
+}
+
+/* Buttons */
+button, .btn {
+    padding:10px 20px;
+    border:none;
+    border-radius:8px;
+    background:#3A8DFF;
+    color:#fff;
+    cursor:pointer;
+    transition:0.3s;
+    text-decoration:none;
+    display:inline-block;
+    font-size:14px;
+}
+
+button:hover, .btn:hover {
+    background:#3273d6;
+}
+
+/* Links */
+a {
+    text-decoration:none;
+    color:#3A8DFF;
+    transition:0.3s;
+}
+
+a:hover {
+    text-decoration:underline;
+}
+
+/* Forms */
+form {
+    background:#fff;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.1);
+    margin-bottom:20px;
+}
+
+input, select, textarea {
+    width:100%;
+    padding:12px;
+    margin:8px 0;
+    border:1px solid #ccc;
+    border-radius:8px;
+    outline:none;
+    transition:0.3s;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color:#3A8DFF;
+    box-shadow:0 0 5px rgba(58,141,255,0.3);
+}
+
+/* Table styles */
+table {
+    width:100%;
+    border-collapse:collapse;
+    margin-bottom:20px;
+}
+
+table th, table td {
+    border:1px solid #ccc;
+    padding:10px;
+    text-align:left;
+}
+
+table th {
+    background:#3A8DFF;
+    color:#fff;
+}
+
+tr:nth-child(even) {
+    background:#f9f9f9;
+}
+
+/* Card layout (for food / kiosk / orders) */
+.card {
+    border:2px solid #ccc;
+    border-radius:12px;
+    padding:15px;
+    background:#fff;
+    box-shadow:0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom:15px;
+}
+
+/* Allergen highlight */
+.card.allergen {
+    border-color:red;
+}
+
+/* Flex container for food / orders */
+.flex-container {
+    display:flex;
+    flex-wrap:wrap;
+    gap:15px;
+}
+
+.flex-container .card {
+    flex:1 1 250px;
+    max-width:300px;
+}
+
+/* Responsive adjustments */
+@media (max-width:768px) {
+    .flex-container .card {
+        flex:1 1 45%;
+    }
+}
+
+@media (max-width:480px) {
+    .flex-container .card {
+        flex:1 1 100%;
+    }
+}
+
+/* Notification messages */
+.notify {
+    padding:10px;
+    border-radius:8px;
+    margin-bottom:15px;
+    font-weight:bold;
+}
+
+.notify.success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
+.notify.error { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
+
+/* Back button */
+.back-btn {
+    display:inline-block;
+    margin-bottom:15px;
+    color:#3A8DFF;
+}
+
+.back-btn:hover {
+    text-decoration:underline;
+}
+
+/* Dashboard cards */
+.dashboard-card {
+    background:#fff;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.1);
+    flex:1 1 250px;
+    text-align:center;
+    transition:0.3s;
+}
+
+.dashboard-card:hover {
+    box-shadow:0 5px 15px rgba(0,0,0,0.2);
+}
+
+/* Header / navigation menu for dashboards */
+.header {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.header h2 {
+    margin:0;
+}
+
+.header .logout-btn {
+    background:#ff4d4d;
+}
+
+.header .logout-btn:hover {
+    background:#e63939;
+}
